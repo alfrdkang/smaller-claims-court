@@ -1,16 +1,34 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
+import OpenAI from "openai";
+import { zodResponseFormat } from "openai/helpers/zod";
 import * as z from "zod/v4";
 
 import { APPELLATE, getPersona } from "./personas";
 import type { Case, Verdict } from "./types";
 
-export const JUDGE_MODEL = process.env.JUDGE_MODEL || "claude-opus-5";
+/** Which provider is currently seated. */
+type Provider = "openai" | "anthropic";
+
+function detectProvider(): Provider | null {
+  if (process.env.OPENAI_API_KEY) return "openai";
+  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
+  return null;
+}
+
+function defaultModel(provider: Provider): string {
+  return provider === "openai" ? "gpt-4o" : "claude-3-5-sonnet-20241022";
+}
+
+export const JUDGE_MODEL = process.env.JUDGE_MODEL || defaultModel(detectProvider() ?? "openai");
 
 /**
  * Effort trades ruling quality against latency. `low` keeps a live demo snappy
  * (typically a handful of seconds); `medium`/`high` produce more elaborate
  * reasoning and more baroque precedent at the cost of a longer wait.
+ *
+ * This maps directly to Anthropic's `effort` parameter; OpenAI does not have an
+ * equivalent knob, so the prompt's 150-word cap and tone do the work there.
  */
 const JUDGE_EFFORT = (process.env.JUDGE_EFFORT || "low") as
   | "low"
@@ -19,7 +37,7 @@ const JUDGE_EFFORT = (process.env.JUDGE_EFFORT || "low") as
   | "xhigh"
   | "max";
 
-/** Claude reads the evidence, but a fistful of photos is plenty for a ruling. */
+/** The judge reads the evidence, but a fistful of photos is plenty for a ruling. */
 const MAX_EVIDENCE_IMAGES = 4;
 
 const SUPPORTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"] as const;
@@ -63,21 +81,33 @@ export class JudgeError extends Error {
   }
 }
 
-let cached: Anthropic | null = null;
+let openaiCached: OpenAI | null = null;
+let anthropicCached: Anthropic | null = null;
 
-function client(): Anthropic {
+function openaiClient(): OpenAI {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new JudgeError(
+      "OPENAI_API_KEY is not set - the bench cannot be seated.",
+      "no_api_key",
+    );
+  }
+  openaiCached ??= new OpenAI();
+  return openaiCached;
+}
+
+function anthropicClient(): Anthropic {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new JudgeError(
       "ANTHROPIC_API_KEY is not set - the bench cannot be seated.",
       "no_api_key",
     );
   }
-  cached ??= new Anthropic();
-  return cached;
+  anthropicCached ??= new Anthropic();
+  return anthropicCached;
 }
 
 export function judgeAvailable(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
+  return Boolean(process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY);
 }
 
 const BASE_SYSTEM = `You are a judge of the Smaller Claims Court, a court of record that hears only the pettiest disputes between friends, roommates and colleagues.
@@ -168,7 +198,17 @@ function caseBrief(c: Case, appeal: boolean): string {
   return lines.join("\n");
 }
 
-function userContent(c: Case, appeal: boolean): Anthropic.Beta.BetaContentBlockParam[] {
+function evidenceDataUris(c: Case): string[] {
+  return c.evidence
+    .slice(0, MAX_EVIDENCE_IMAGES)
+    .map((item) => item.imageUrl)
+    .filter((uri): uri is string => {
+      const parsed = parseDataUri(uri);
+      return parsed !== null;
+    });
+}
+
+function anthropicUserContent(c: Case, appeal: boolean): Anthropic.Beta.BetaContentBlockParam[] {
   const blocks: Anthropic.Beta.BetaContentBlockParam[] = [
     { type: "text", text: caseBrief(c, appeal) },
   ];
@@ -191,8 +231,8 @@ function userContent(c: Case, appeal: boolean): Anthropic.Beta.BetaContentBlockP
  * enabled and retries once without them if the account has not been granted that
  * beta, so a missing entitlement never costs us the demo.
  */
-export async function renderJudgment(c: Case, appeal = false): Promise<VerdictFields> {
-  const anthropic = client();
+async function renderJudgmentAnthropic(c: Case, appeal = false): Promise<VerdictFields> {
+  const anthropic = anthropicClient();
 
   const request = {
     model: JUDGE_MODEL,
@@ -205,7 +245,7 @@ export async function renderJudgment(c: Case, appeal = false): Promise<VerdictFi
         cache_control: { type: "ephemeral" as const },
       },
     ],
-    messages: [{ role: "user" as const, content: userContent(c, appeal) }],
+    messages: [{ role: "user" as const, content: anthropicUserContent(c, appeal) }],
     output_config: {
       effort: JUDGE_EFFORT,
       format: betaZodOutputFormat(VerdictSchema),
@@ -245,8 +285,68 @@ export async function renderJudgment(c: Case, appeal = false): Promise<VerdictFi
   return parsed;
 }
 
+async function renderJudgmentOpenAI(c: Case, appeal = false): Promise<VerdictFields> {
+  const openai = openaiClient();
+
+  const content: OpenAI.ChatCompletionContentPart[] = [
+    { type: "text", text: caseBrief(c, appeal) },
+  ];
+
+  evidenceDataUris(c).forEach((uri, i) => {
+    content.push({ type: "text", text: `Exhibit ${String.fromCharCode(65 + i)}:` });
+    content.push({ type: "image_url", image_url: { url: uri } });
+  });
+
+  try {
+    const response = await openai.chat.completions.parse({
+      model: JUDGE_MODEL,
+      messages: [
+        { role: "system", content: personaSystem(c, appeal) },
+        { role: "user", content },
+      ],
+      response_format: zodResponseFormat(VerdictSchema, "verdict"),
+    });
+
+    const parsed = response.choices[0]?.message?.parsed;
+    if (!parsed) {
+      throw new JudgeError("The court's ruling was illegible.", "unparsable");
+    }
+    return parsed;
+  } catch (err) {
+    if (err instanceof OpenAI.APIError) {
+      throw new JudgeError(`The bench is unreachable (${err.status}): ${err.message}`, "upstream");
+    }
+    throw err;
+  }
+}
+
+/**
+ * Ask the seated provider for a ruling.
+ *
+ * Prefers OpenAI when OPENAI_API_KEY is set; otherwise falls back to Anthropic.
+ * This lets you switch providers by setting the matching key and unsetting the
+ * other, with no code changes.
+ */
+export async function renderJudgment(c: Case, appeal = false): Promise<VerdictFields> {
+  const provider = detectProvider();
+  if (provider === "openai") {
+    return renderJudgmentOpenAI(c, appeal);
+  }
+  if (provider === "anthropic") {
+    return renderJudgmentAnthropic(c, appeal);
+  }
+  throw new JudgeError(
+    "No judge API key is set. Set OPENAI_API_KEY or ANTHROPIC_API_KEY to seat the bench.",
+    "no_api_key",
+  );
+}
+
 /** The text actually sent to ElevenLabs. Kept short so the clip lands in a demo. */
-export function spokenRuling(v: Pick<Verdict, "caseCitation" | "reasoning" | "ruling" | "damagesAwarded">, c: Case, appeal = false): string {
+export function spokenRuling(
+  v: Pick<Verdict, "caseCitation" | "reasoning" | "ruling" | "damagesAwarded">,
+  c: Case,
+  appeal = false,
+): string {
   const bench = appeal ? APPELLATE.name : getPersona(c.personaId).name;
   return [
     `${appeal ? "On appeal in" : "In"} the matter of ${c.plaintiff} versus ${c.defendant}, case number ${c.caseNumber}.`,

@@ -17,13 +17,13 @@ The joke is the format, played completely straight.
 
 ```bash
 npm install
-cp .env.example .env.local     # add ANTHROPIC_API_KEY (and ELEVENLABS_API_KEY)
+cp .env.example .env.local     # add OPENAI_API_KEY or ANTHROPIC_API_KEY (and ELEVENLABS_API_KEY)
 npm run dev                    # http://localhost:3000
 ```
 
-The only strictly required key is `ANTHROPIC_API_KEY`. Without `ELEVENLABS_API_KEY`
-everything still works — rulings are simply delivered in silence, and the "testify
-aloud" button hides itself.
+The only strictly required key is `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`. OpenAI is
+used when both are present. Without `ELEVENLABS_API_KEY` everything still works —
+rulings are simply delivered in silence, and the "testify aloud" button hides itself.
 
 Before wiring up any UI, you can exercise the judge on its own:
 
@@ -64,7 +64,7 @@ File a case  ->  Tender evidence  ->  Submit for judgment  ->  Verdict + audio +
 |---|---|
 | Framework | Next.js 15 (App Router) + React 19 + TypeScript |
 | Styling | Tailwind CSS 3 |
-| Judge | Claude (`claude-opus-5`) via `@anthropic-ai/sdk`, structured outputs with Zod |
+| Judge | OpenAI (`gpt-4o`) or Anthropic (`claude-opus-5`), structured outputs with Zod |
 | Voice | ElevenLabs `eleven_flash_v2_5` (TTS) and `scribe_v1` (voice testimony) |
 | PDF | `@react-pdf/renderer` + `qrcode`, rendered server-side |
 | Sound FX | Web Audio, synthesised in the browser — no assets to ship |
@@ -78,8 +78,9 @@ Every variable is optional except `ANTHROPIC_API_KEY`. See `.env.example` for th
 full annotated list.
 
 | Variable | Purpose |
-|---|---|
-| `ANTHROPIC_API_KEY` | **Required.** Seats the bench. |
+|---|---|---|
+| `OPENAI_API_KEY` | **Required** (or `ANTHROPIC_API_KEY`). Seats the bench. OpenAI is preferred if both are set. |
+| `ANTHROPIC_API_KEY` | **Required** (or `OPENAI_API_KEY`). Seats the bench. |
 | `ELEVENLABS_API_KEY` | Spoken verdicts and voice testimony. |
 | `NEXT_PUBLIC_COURT_NAME` | Appears in the header and on the PDF letterhead — set it to your event. |
 | `NEXT_PUBLIC_BASE_URL` | Only if share links / QR codes must not use the request host. |
@@ -120,8 +121,10 @@ never costs you a second ruling.
 
 ## The judge
 
-`lib/judge.ts` holds the whole thing. The system prompt fixes the persona and the
-house rules; a Zod schema fixes the shape:
+`lib/judge.ts` holds the whole thing. It speaks to either OpenAI or Anthropic using
+the same system prompt and the same Zod schema, so you can seat whichever provider
+you have a key for. The provider is picked automatically from the env vars
+(`OPENAI_API_KEY` takes precedence).
 
 ```ts
 { caseCitation, reasoning, ruling, damagesAwarded }
