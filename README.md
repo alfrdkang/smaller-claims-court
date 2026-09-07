@@ -2,6 +2,8 @@
 
 A court of record for disputes that do not deserve one.
 
+v1 made by John claude
+
 Friends sue each other over $3, stolen leftovers, and the mug that has been in the
 sink for eleven days. Both sides file evidence. An AI judge reads the case, invents
 binding precedent, and hands down a ruling with total sincerity — which it then
