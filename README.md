@@ -2,7 +2,7 @@
 
 A court of record for disputes that do not deserve one.
 
-v1 made by John claude
+v1 made by John Claude
 
 Friends sue each other over $3, stolen leftovers, and the mug that has been in the
 sink for eleven days. Both sides file evidence. An AI judge reads the case, invents
@@ -145,7 +145,7 @@ npx vercel        # then add the env vars in the project settings
 ```
 
 Push to GitHub and import the repo, or deploy from the CLI. Set at minimum
-`ANTHROPIC_API_KEY`, and set the Upstash pair if share links need to survive cold
+`ANTHROPIC_API_KEY` or `OPENAI_API_KEY`, and set the Upstash pair if share links need to survive cold
 starts. `NEXT_PUBLIC_BASE_URL` is unnecessary — Vercel's own deployment URL is
 picked up automatically.
 
