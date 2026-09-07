@@ -5,7 +5,7 @@ import { zodResponseFormat } from "openai/helpers/zod";
 import * as z from "zod/v4";
 
 import { APPELLATE, getPersona } from "./personas";
-import type { Case, Verdict } from "./types";
+import type { Case } from "./types";
 
 /** Which provider is currently seated. */
 type Provider = "openai" | "anthropic";
@@ -28,7 +28,7 @@ export const JUDGE_MODEL = process.env.JUDGE_MODEL || defaultModel(detectProvide
  * reasoning and more baroque precedent at the cost of a longer wait.
  *
  * This maps directly to Anthropic's `effort` parameter; OpenAI does not have an
- * equivalent knob, so the prompt's 150-word cap and tone do the work there.
+ * equivalent knob, so the prompt's 120-word cap and tone do the work there.
  */
 const JUDGE_EFFORT = (process.env.JUDGE_EFFORT || "low") as
   | "low"
@@ -53,18 +53,18 @@ export const VerdictSchema = z.object({
   reasoning: z
     .string()
     .describe(
-      "Two to four sentences of mock-legal analysis. Reference the evidence, the cited precedent, " +
-        "and the totality of the circumstances. Utterly serious in tone.",
+      "Two sentences of mock-legal analysis, at most 55 words in total. Reference the evidence, " +
+        "the cited precedent, and the totality of the circumstances. Utterly serious in tone.",
     ),
   ruling: z
     .string()
     .describe(
-      "Who prevails, stated formally in one or two sentences. Name the parties as given.",
+      "Who prevails, stated formally in one sentence of at most 25 words. Name the parties as given.",
     ),
   damagesAwarded: z
     .string()
     .describe(
-      "The award. Usually part monetary, part absurdly specific non-monetary obligation with a deadline. " +
+      "The award, at most 30 words. Usually part monetary, part absurdly specific non-monetary obligation with a deadline. " +
         'Example: "three (3) dollars, plus one (1) sincerely worded apology text within 48 hours".',
     ),
 });
@@ -121,7 +121,7 @@ House rules of the bench:
 - Rule decisively for one party. Split decisions are permitted only when both parties have plainly disgraced themselves.
 - Damages should be mostly non-monetary, oddly specific, enforceable-sounding, and time-bound.
 - Both parties are consenting friends who filed this case for fun. Be witheringly formal about their conduct in the dispute, but never cruel about their appearance, identity, or anything outside the four corners of the case.
-- Total output across all four fields must stay under 150 words. This ruling is read aloud; brevity is a virtue of the bench.`;
+- Total output across all four fields must stay under 120 words. This ruling is read aloud; brevity is a virtue of the bench.`;
 
 function personaSystem(c: Case, appeal: boolean): string {
   if (appeal) {
@@ -341,19 +341,4 @@ export async function renderJudgment(c: Case, appeal = false): Promise<VerdictFi
   );
 }
 
-/** The text actually sent to ElevenLabs. Kept short so the clip lands in a demo. */
-export function spokenRuling(
-  v: Pick<Verdict, "caseCitation" | "reasoning" | "ruling" | "damagesAwarded">,
-  c: Case,
-  appeal = false,
-): string {
-  const bench = appeal ? APPELLATE.name : getPersona(c.personaId).name;
-  return [
-    `${appeal ? "On appeal in" : "In"} the matter of ${c.plaintiff} versus ${c.defendant}, case number ${c.caseNumber}.`,
-    `This court is guided by ${v.caseCitation}.`,
-    v.reasoning,
-    v.ruling,
-    `Damages are awarded as follows: ${v.damagesAwarded}.`,
-    `So ordered. ${bench}.`,
-  ].join(" ");
-}
+export { spokenRuling } from "./spoken-ruling";

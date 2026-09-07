@@ -31,16 +31,33 @@ async function collect(stream: ReadableStream<Uint8Array>): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
+const DELIVERY = {
+  // Steady and slightly slow: this is a judge, not a podcast host.
+  bench: { stability: 0.5, similarityBoost: 0.75, style: 0.35, speed: 0.92, useSpeakerBoost: true },
+  // A friend explaining themselves to a court. Looser and a touch quicker.
+  party: { stability: 0.4, similarityBoost: 0.75, style: 0.5, speed: 1, useSpeakerBoost: true },
+} as const;
+
+/** Library voices for the two disputants. Both are overridable from the env. */
+export const PARTY_VOICES = {
+  plaintiff: process.env.ELEVENLABS_VOICE_PLAINTIFF || "EXAVITQu4vr4xnSDxMaL",
+  defendant: process.env.ELEVENLABS_VOICE_DEFENDANT || "IKne3meq5aSn9XLyUdCD",
+} as const;
+
 /**
- * Render the ruling in the judge's voice.
+ * Render a line of the hearing aloud.
  *
  * Returns null - rather than throwing - when TTS is unconfigured or the API
- * fails. A silent verdict page is a far better demo than a 500, and the caller
+ * fails. A silent page is a far better demo than a 500, and the caller
  * surfaces the text either way.
  */
-export async function speakRuling(text: string, voiceId: string): Promise<Buffer | null> {
+async function speak(
+  text: string,
+  voiceId: string,
+  delivery: keyof typeof DELIVERY,
+): Promise<Buffer | null> {
   if (!voiceAvailable()) {
-    console.warn("[voice] ELEVENLABS_API_KEY not set - the ruling will be delivered in silence.");
+    console.warn("[voice] ELEVENLABS_API_KEY not set - this will be delivered in silence.");
     return null;
   }
 
@@ -49,14 +66,7 @@ export async function speakRuling(text: string, voiceId: string): Promise<Buffer
       text,
       modelId: MODEL_ID,
       outputFormat: OUTPUT_FORMAT,
-      voiceSettings: {
-        // Steady and slightly slow: this is a judge, not a podcast host.
-        stability: 0.5,
-        similarityBoost: 0.75,
-        style: 0.35,
-        speed: 0.92,
-        useSpeakerBoost: true,
-      },
+      voiceSettings: DELIVERY[delivery],
     });
     const audio = await collect(stream);
     return audio.length > 0 ? audio : null;
@@ -64,4 +74,13 @@ export async function speakRuling(text: string, voiceId: string): Promise<Buffer
     console.error("[voice] ElevenLabs synthesis failed:", err);
     return null;
   }
+}
+
+export function speakRuling(text: string, voiceId: string): Promise<Buffer | null> {
+  return speak(text, voiceId, "bench");
+}
+
+/** The plaintiff's claim or the defendant's rebuttal, read in their own voice. */
+export function speakStatement(text: string, voiceId: string): Promise<Buffer | null> {
+  return speak(text, voiceId, "party");
 }

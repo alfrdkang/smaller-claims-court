@@ -1,0 +1,77 @@
+.experience { position: fixed; inset: 0; z-index: 50; width: 100%; height: 100dvh; overflow: hidden; isolation: isolate;
+  --scene-ground: #e7dfd0; --console-ground: #efe7d8f2; --console-edge: #a8926555; --console-ink: #7b6c52; --overlay-ink: #675d4d;
+  background: var(--scene-ground); }
+.experience[data-scene="golden"] { --scene-ground: #e3c8a8; --console-ground: #ead1b0f2; --console-edge: #9d7c4b55; --console-ink: #6b5233; --overlay-ink: #5d4526; }
+.experience[data-scene="night"] { --scene-ground: #24343c; --console-ground: #22333bf2; --console-edge: #7d9aa84d; --console-ink: #a3b9c2; --overlay-ink: #b3c6cd; }
+.document { position: absolute; z-index: 3; inset: 0 auto 0 0; width: 40%; padding: 24px clamp(20px, 2.3vw, 36px) 40px; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; color: #eee0c4; background: #1a0f0a; background-image: radial-gradient(ellipse at top, #d4ab4514, transparent 65%), repeating-linear-gradient(94deg, #1a0f0a00 0px, #2e1b138c 2px, #1a0f0a00 5px, #4a2c1e59 9px); border-right: 1px solid #a8926555; box-shadow: 14px 0 45px #251c1220; transform: translateX(-100%); transition: transform 1s cubic-bezier(.22, 1, .36, 1); }
+.experience[data-courtroom-layout="split"] .document { transform: translateX(0); transition-delay: .45s; }
+.document:focus, .room:focus { outline: none; }
+.document :global(.paper) { padding: 28px 24px; }
+.document :global(.paper) > :global(.pointer-events-none) { display: none; }
+.document :global(.paper) h2 { max-width: none; }
+.document h1 { font-size: clamp(22px, 2.2vw, 31px); }
+.document p, .document h1, .document h2 { overflow-wrap: anywhere; }
+.document :global(.btn-ghost), .document :global(.btn-primary) { min-height: 42px; }
+.paperTop { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 28px; padding-bottom: 18px; border-bottom: 1px solid #b7a27c44; font: 10px var(--font-mono), monospace; letter-spacing: .12em; color: #c8b38a; }
+.paperTop button { min-height: 40px; letter-spacing: 0; }
+.room { position: absolute; inset: 0 0 0 0; min-width: 0; overflow: hidden; transition: left 1s cubic-bezier(.22, 1, .36, 1); color: #342c20; }
+.experience[data-courtroom-layout="split"] .room { left: 40%; transition-delay: .45s; }
+.canvas { position: absolute; inset: 0; bottom: var(--console-height, 0px); transition: bottom 1s cubic-bezier(.22, 1, .36, 1); }
+.experience[data-courtroom-layout="split"] .canvas { transition-delay: .45s; }
+.roomTop { position: absolute; inset: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 24px 30px; pointer-events: none; background: linear-gradient(#eee6d8e6, #eee6d800); }
+.roomTop p { font: italic 20px var(--font-serif), Georgia, serif; margin-top: 5px; }
+.roomTop a { pointer-events: auto; padding: 12px 15px; border: 1px solid #72614755; border-radius: 4px; font: 11px var(--font-mono), monospace; background: #f2ebdfcc; }
+.eyebrow { font: 10px var(--font-mono), monospace; letter-spacing: .18em; }
+.caseLabel { position: absolute; top: 105px; left: 30px; max-width: calc(100% - 60px); font: 12px var(--font-mono), monospace; color: var(--overlay-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+.caseLabel em { margin: 0 8px; font-family: var(--font-serif), serif; }
+.delivery { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); width: min(780px, calc(100% - 48px)); }
+.caption { background: #fbf6ecef; border: 1px solid #a28b625e; border-radius: 8px; box-shadow: 0 12px 40px #34261520; padding: 18px 24px 22px; backdrop-filter: blur(12px); }
+.speaker { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; color: #45604c; font: 10px var(--font-mono), monospace; text-transform: uppercase; letter-spacing: .09em; }
+.speaker img { object-fit: contain; margin: -9px 0; }
+.speaker small { margin-left: auto; color: #7c715e; font-size: 9px; text-transform: none; letter-spacing: .04em; }
+.caption > p { margin-top: 14px; font: 20px/1.5 var(--font-serif), Georgia, serif; overflow-wrap: anywhere; }
+.transport { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; font: 10px var(--font-mono), monospace; }
+.transport > span { letter-spacing: .1em; color: var(--overlay-ink); }
+.transport > div { display: flex; gap: 7px; }
+.transport button, .audioPrompt button, .console button, .loading button { min-height: 40px; padding: 9px 12px; background: #f6f0e4e8; border: 1px solid #95836766; border-radius: 4px; }
+.experience button:disabled { opacity: .45; cursor: not-allowed; }
+.experience button:focus-visible, .experience select:focus-visible, .experience a:focus-visible { outline: 3px solid #a17e29; outline-offset: 3px; }
+.audioPrompt { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; padding: 12px; background: #304b3e; color: #f8eedc; font: 12px var(--font-mono), monospace; border-radius: 5px; margin-top: 10px; }
+.audioPrompt button { color: #283e33; }
+.audioNotice { padding: 8px 12px; margin-top: 8px; border-radius: 4px; background: #f6f0e4ed; font: 11px/1.5 var(--font-mono), monospace; }
+.console { position: absolute; left: 0; right: 0; bottom: 0; display: grid; gap: 9px; padding: 14px clamp(18px, 2vw, 30px) 16px; background: var(--console-ground); border-top: 1px solid var(--console-edge); box-shadow: 0 -12px 34px #34261512; backdrop-filter: blur(10px); animation: consoleIn 1s cubic-bezier(.22, 1, .36, 1) .45s both; }
+.consoleRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
+.consoleRow .eyebrow { color: var(--console-ink); }
+.group { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.console button { font: 10px var(--font-mono), monospace; color: #3a3227; }
+.console button[aria-pressed="true"] { background: #35513f; border-color: #35513f; color: #f5ecd9; }
+.selectLabel { display: flex; align-items: center; gap: 7px; font: 10px var(--font-mono), monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--console-ink); }
+.selectLabel select { min-height: 40px; padding: 8px 10px; border: 1px solid #95836766; border-radius: 4px; background: #f6f0e4e8; color: #342c20; font: 10px var(--font-mono), monospace; }
+@keyframes consoleIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.loading { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 30px; background: #e7dfd0; color: #3e4938; text-align: center; font: 18px var(--font-serif), serif; }
+.loading p { max-width: 370px; font-size: 14px; }
+@media (max-width: 899px) {
+  .experience[data-courtroom-layout="split"] .room { left: 0; bottom: 55%; transition-delay: .45s; }
+  .document { width: 100%; top: 45%; padding: 18px 22px 36px; transform: translateY(110%); border-top: 1px solid #a8926588; border-right: 0; }
+  .experience[data-courtroom-layout="split"] .document { transform: translateY(0); transition-delay: .45s; }
+  .room { transition: bottom 1s cubic-bezier(.22, 1, .36, 1); }
+  .roomTop { padding: 18px; }
+  .roomTop p { font-size: 17px; }
+  .caseLabel { top: 90px; left: 18px; font-size: 10px; }
+  .delivery { width: calc(100% - 28px); bottom: 14px; }
+  .caption { padding: 14px 16px 17px; }
+  .caption > p { font-size: 17px; line-height: 1.45; }
+  .speaker small { display: none; }
+  .transport { flex-wrap: wrap; }
+  .transport > div { width: 100%; }
+  .transport button { flex: 1; padding: 8px; font-size: 10px; min-height: 44px; }
+  .console { gap: 7px; padding: 10px 12px 12px; }
+  .consoleRow { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; overscroll-behavior-x: contain; }
+  .consoleRow .eyebrow { display: none; }
+  .group { flex-wrap: nowrap; }
+  .console button, .selectLabel, .selectLabel select { white-space: nowrap; }
+  .console button, .selectLabel select { min-height: 38px; }
+  .experience[data-courtroom-layout="split"] .caseLabel { display: none; }
+  .experience[data-courtroom-layout="split"] .roomTop p { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .room, .document, .canvas { transition: none; } .console { animation: none; } }

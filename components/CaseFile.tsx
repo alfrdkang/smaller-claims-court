@@ -3,14 +3,12 @@
 import Link from "next/link";
 import React from "react";
 
-import { Gavel } from "@/components/Gavel";
+import { CaseCourtroom } from "@/components/courtroom/CaseCourtroom";
 import { fileToDataUri } from "@/lib/client/images";
-import { gavelBang, toggleAmbience } from "@/lib/client/sound";
+import { toggleAmbience } from "@/lib/client/sound";
 import { APPELLATE, getPersona } from "@/lib/personas";
 import type { Case, Verdict } from "@/lib/types";
 import { MAX_EVIDENCE_ITEMS } from "@/lib/validate";
-
-type Phase = "idle" | "deliberating" | "revealing" | "settled";
 
 function benchName(record: Case, verdict: Verdict | undefined) {
   return verdict?.appeal ? APPELLATE.name : getPersona(record.personaId).name;
@@ -18,50 +16,51 @@ function benchName(record: Case, verdict: Verdict | undefined) {
 
 export function CaseFile({ initialCase }: { initialCase: Case }) {
   const [record, setRecord] = React.useState<Case>(initialCase);
-  const [phase, setPhase] = React.useState<Phase>(
-    initialCase.status === "judged" ? "settled" : "idle",
-  );
+  const [deliberating, setDeliberating] = React.useState(false);
+  const [inCourtroom, setInCourtroom] = React.useState(initialCase.status === "judged");
+  const [hearingRequest, setHearingRequest] = React.useState(0);
+  const submitting = React.useRef(false);
+  const controller = React.useRef<AbortController | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
   const [ambient, setAmbient] = React.useState(false);
   const [audioBlocked, setAudioBlocked] = React.useState(false);
 
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
-  const verdictRef = React.useRef<HTMLDivElement | null>(null);
+  React.useEffect(() => () => controller.current?.abort(), []);
 
   const verdict = record.verdict;
   const judged = record.status === "judged";
 
   async function deliverJudgment(appeal = false) {
+    if (submitting.current) return;
+    submitting.current = true;
     setError(null);
-    setPhase("deliberating");
+    setDeliberating(true);
+    setInCourtroom(true);
+    setHearingRequest(value => value + 1);
+    audioRef.current?.pause();
+    const abort = new AbortController();
+    controller.current = abort;
+    const timeout = window.setTimeout(() => abort.abort(), 120000);
     try {
       const res = await fetch(`/api/cases/${record.id}/judge`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ appeal }),
+        signal: abort.signal,
       });
       const body = (await res.json()) as Case & { error?: string };
       if (!res.ok) throw new Error(body.error || "The bench could not reach a decision.");
 
       setRecord(body);
-      setPhase("revealing");
-      gavelBang();
-
-      // Let the gavel land before the ruling is read out.
-      window.setTimeout(() => {
-        verdictRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        const el = audioRef.current;
-        if (el) {
-          el.currentTime = 0;
-          el.play().catch(() => setAudioBlocked(true));
-        }
-      }, 650);
-
-      window.setTimeout(() => setPhase("settled"), 1400);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "The bench could not reach a decision.");
-      setPhase(judged ? "settled" : "idle");
+      setError(abort.signal.aborted ? "The bench took too long to respond. Reload this case to check whether the order was saved before trying again." : err instanceof Error ? err.message : "The bench could not reach a decision.");
+      setInCourtroom(false);
+    } finally {
+      window.clearTimeout(timeout);
+      submitting.current = false;
+      setDeliberating(false);
     }
   }
 
@@ -75,9 +74,9 @@ export function CaseFile({ initialCase }: { initialCase: Case }) {
     }
   }
 
-  const deliberating = phase === "deliberating";
-
   return (
+    <CaseCourtroom record={record} pending={deliberating} request={hearingRequest} active={inCourtroom}
+      onExit={() => setInCourtroom(false)} onEnter={() => setInCourtroom(true)}>
     <div className="space-y-8">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -124,7 +123,7 @@ export function CaseFile({ initialCase }: { initialCase: Case }) {
         />
       ) : null}
 
-      {deliberating ? <Deliberating record={record} /> : null}
+      {deliberating && !inCourtroom ? <p role="status">The court is deliberating. Please wait for the order.</p> : null}
 
       {error ? (
         <p className="rounded-sm border border-red-500/40 bg-red-950/40 px-4 py-3 text-sm text-red-200">
@@ -133,11 +132,11 @@ export function CaseFile({ initialCase }: { initialCase: Case }) {
       ) : null}
 
       {verdict ? (
-        <div ref={verdictRef}>
+        <div>
           <VerdictSheet
             record={record}
             verdict={verdict}
-            revealing={phase === "revealing"}
+            revealing={false}
             audioRef={audioRef}
             audioBlocked={audioBlocked}
             onPlay={() => {
@@ -158,6 +157,7 @@ export function CaseFile({ initialCase }: { initialCase: Case }) {
         </Link>
       </div>
     </div>
+    </CaseCourtroom>
   );
 }
 
@@ -365,40 +365,6 @@ function PreTrial({
           {busy ? "The court is deliberating..." : "Submit for judgment"}
         </button>
       </div>
-    </section>
-  );
-}
-
-const DELIBERATION_NOTES = [
-  "Reviewing the pleadings",
-  "Examining the exhibits",
-  "Consulting precedent that does not exist",
-  "Weighing the totality of the circumstances",
-  "Composing the order",
-];
-
-function Deliberating({ record }: { record: Case }) {
-  const [step, setStep] = React.useState(0);
-
-  React.useEffect(() => {
-    const timer = setInterval(
-      () => setStep((s) => Math.min(s + 1, DELIBERATION_NOTES.length - 1)),
-      2600,
-    );
-    return () => clearInterval(timer);
-  }, []);
-
-  return (
-    <section className="panel flex flex-col items-center p-10 text-center" aria-live="polite">
-      <Gavel className="h-20 w-20 animate-flicker" />
-      <p className="mt-5 font-display text-lg text-brass-200">The court is in deliberation</p>
-      <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.18em] text-oak-300/70">
-        {DELIBERATION_NOTES[step]}
-      </p>
-      <p className="mt-4 max-w-sm text-xs leading-relaxed text-oak-300/60">
-        {getPersona(record.personaId).name} is reviewing {record.evidence.length}{" "}
-        {record.evidence.length === 1 ? "exhibit" : "exhibits"} and will rule shortly.
-      </p>
     </section>
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { badRequest, readJson } from "@/lib/http";
+import { recordStatement } from "@/lib/statement-voice";
 import { createCase, listCases } from "@/lib/store";
 import { toSummary } from "@/lib/types";
 import { firstIssue, NewCaseSchema } from "@/lib/validate";
@@ -15,7 +16,8 @@ export async function POST(req: Request) {
   if (!parsed.success) return badRequest(firstIssue(parsed.error));
 
   const record = await createCase(parsed.data);
-  return NextResponse.json(record, { status: 201 });
+  const spoken = await recordStatement(record.id, "plaintiff", record.description);
+  return NextResponse.json(spoken ?? record, { status: 201 });
 }
 
 /** GET /api/cases - every case on the docket, newest first. */

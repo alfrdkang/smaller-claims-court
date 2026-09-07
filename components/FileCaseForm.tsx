@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import React from "react";
 
 import { VoiceTestimony } from "@/components/VoiceTestimony";
+import { CharacterPicker } from "@/components/CharacterPicker";
+import type { CharacterId } from "@/lib/characters";
 import { fileToDataUri } from "@/lib/client/images";
 import { PERSONA_LIST } from "@/lib/personas";
 import type { Case, PersonaId } from "@/lib/types";
@@ -24,6 +26,8 @@ export function FileCaseForm() {
 
   const [plaintiff, setPlaintiff] = React.useState("");
   const [defendant, setDefendant] = React.useState("");
+  const [plaintiffCharacter, setPlaintiffCharacter] = React.useState<CharacterId>("a");
+  const [defendantCharacter, setDefendantCharacter] = React.useState<CharacterId>("a");
   const [description, setDescription] = React.useState("");
   const [requestedDamages, setRequestedDamages] = React.useState("");
   const [personaId, setPersonaId] = React.useState<PersonaId>("grimsby");
@@ -77,7 +81,7 @@ export function FileCaseForm() {
       const res = await fetch("/api/cases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plaintiff, defendant, description, requestedDamages, personaId }),
+        body: JSON.stringify({ plaintiff, defendant, description, requestedDamages, personaId, plaintiffCharacter, defendantCharacter }),
       });
       const created = (await res.json()) as Case & { error?: string };
       if (!res.ok) throw new Error(created.error || "The clerk rejected the filing.");
@@ -142,6 +146,13 @@ export function FileCaseForm() {
             />
           </div>
         </div>
+      </section>
+
+      <section className="panel p-6">
+        <h2 className="font-display text-sm uppercase tracking-[0.2em] text-brass-200">Your day in court</h2>
+        <p className="mt-2 text-sm text-oak-200/75">Choose who will stand at each lectern. Outfits are not admissible evidence.</p>
+        <CharacterPicker label="Plaintiff character" value={plaintiffCharacter} onChange={setPlaintiffCharacter} />
+        <CharacterPicker label="Defendant character" value={defendantCharacter} onChange={setDefendantCharacter} />
       </section>
 
       <section className="panel p-6">

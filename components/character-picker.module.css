@@ -1,0 +1,8 @@
+.picker { min-width: 0; margin-top: 24px; }
+.picker legend { margin-bottom: 12px; font: 11px var(--font-mono), monospace; letter-spacing: .12em; color: #d5bd88; text-transform: uppercase; }
+.options { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 8px; }
+.option { position: relative; display: grid; place-items: center; min-height: 62px; border: 1px solid #9b82574d; border-radius: 5px; background: #f1e8d8; cursor: pointer; transition: background .15s, box-shadow .15s; }
+.option[data-selected="true"] { background: #dce6db; box-shadow: inset 0 0 0 3px #365448; }
+.option:focus-within { outline: 2px solid #edc768; outline-offset: 3px; }
+.option input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.option img { object-fit: contain; image-rendering: auto; }

@@ -56,7 +56,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const audio = await speakRuling(spokenRuling(fields, record, appeal), voiceId);
 
   const deliveredAt = Date.now();
-  if (audio) await putAudio(id, audio, AUDIO_CONTENT_TYPE);
+  if (audio) await putAudio(id, audio, AUDIO_CONTENT_TYPE, deliveredAt);
 
   const verdict: Verdict = {
     ...fields,

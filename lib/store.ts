@@ -1,4 +1,7 @@
 import type { Case, PersonaId } from "./types";
+import { loadAudio, persistAudio, type StoredAudio } from "./audio-storage";
+
+export type { StoredAudio } from "./audio-storage";
 
 /**
  * Case storage.
@@ -8,11 +11,6 @@ import type { Case, PersonaId } from "./types";
  * UPSTASH_REDIS_REST_TOKEN are set, cases are mirrored to Redis so shareable
  * links keep working across Vercel lambdas. Memory always acts as a read cache.
  */
-
-export interface StoredAudio {
-  base64: string;
-  contentType: string;
-}
 
 interface MemoryState {
   cases: Map<string, Case>;
@@ -61,12 +59,8 @@ async function redis<T = unknown>(...command: (string | number)[]): Promise<T | 
 }
 
 const caseKey = (id: string) => `petty:case:${id}`;
-const audioKey = (id: string) => `petty:audio:${id}`;
 const INDEX_KEY = "petty:docket";
 const COUNTER_KEY = "petty:counter";
-
-/** Upstash free tier caps a request body at ~1MB; skip persisting anything larger. */
-const MAX_PERSISTED_AUDIO_BASE64 = 900_000;
 
 const ID_ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789";
 
@@ -92,6 +86,8 @@ async function nextCaseNumber(): Promise<string> {
 }
 
 export interface NewCaseInput {
+  plaintiffCharacter?: string;
+  defendantCharacter?: string;
   plaintiff: string;
   defendant: string;
   description: string;
@@ -109,6 +105,8 @@ export async function createCase(input: NewCaseInput): Promise<Case> {
     description: input.description,
     requestedDamages: input.requestedDamages,
     personaId: input.personaId,
+    plaintiffCharacter: input.plaintiffCharacter ?? "a",
+    defendantCharacter: input.defendantCharacter ?? "a",
     evidence: [],
     status: "filed",
     history: [],
@@ -164,24 +162,18 @@ export async function listCases(limit = 100): Promise<Case[]> {
   return [...mem.cases.values()].sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
 }
 
-export async function putAudio(id: string, audio: Buffer, contentType: string): Promise<void> {
-  const base64 = audio.toString("base64");
-  mem.audio.set(id, { base64, contentType });
-  if (base64.length <= MAX_PERSISTED_AUDIO_BASE64) {
-    await redis("SET", audioKey(id), JSON.stringify({ base64, contentType }));
-  }
+export async function putAudio(
+  id: string,
+  audio: Buffer,
+  contentType: string,
+  version?: string | number,
+): Promise<void> {
+  await persistAudio(redis, mem.audio, id, audio, contentType, version);
 }
 
-export async function getAudio(id: string): Promise<StoredAudio | null> {
-  const cached = mem.audio.get(id);
-  if (cached) return cached;
-  const raw = await redis<string>("GET", audioKey(id));
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as StoredAudio;
-    mem.audio.set(id, parsed);
-    return parsed;
-  } catch {
-    return null;
-  }
+export async function getAudio(
+  id: string,
+  version?: string | number,
+): Promise<StoredAudio | null> {
+  return loadAudio(redis, mem.audio, id, version);
 }

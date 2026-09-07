@@ -34,6 +34,10 @@ export interface Case {
   requestedDamages: string;
   personaId: PersonaId;
   evidence: EvidenceItem[];
+  plaintiffCharacter?: string;
+  defendantCharacter?: string;
+  plaintiffAudioUrl?: string | null;
+  defendantAudioUrl?: string | null;
   rebuttal?: string;
   status: CaseStatus;
   verdict?: Verdict;

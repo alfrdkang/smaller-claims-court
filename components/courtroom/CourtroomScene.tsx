@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, OrbitControls, RoundedBox } from "@react-three/drei";
+import { Html, OrbitControls, RoundedBox, useProgress } from "@react-three/drei";
 import React from "react";
 import * as THREE from "three";
 import { CourtroomJudge, type JudgePerformance } from "./CourtroomJudge";
@@ -809,8 +809,12 @@ function CameraRig({ view, reset }: { view: CourtroomView; reset: number }) {
   const reducedMotion = React.useRef(false);
   const destination = React.useRef(new THREE.Vector3());
   const target = React.useRef(new THREE.Vector3());
-  const zoom = React.useRef(45);
+  const framing = React.useRef(1);
+  const shotZoom = React.useRef(1);
   const initialized = React.useRef(false);
+  // The viewport fit is applied straight to the camera every frame so the room
+  // tracks a resizing pane exactly. Only the shot's own framing is eased.
+  const fit = Math.min(size.width / 17.5, size.height / 12.8);
 
   React.useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -827,10 +831,11 @@ function CameraRig({ view, reset }: { view: CourtroomView; reset: number }) {
     const shot = SHOTS[view];
     destination.current.set(...shot.position);
     target.current.set(...shot.target);
-    zoom.current = Math.min(size.width / 17.5, size.height / 12.8) * shot.zoom;
+    shotZoom.current = shot.zoom;
     if (!initialized.current) {
       camera.position.copy(destination.current);
-      camera.zoom = zoom.current;
+      framing.current = shot.zoom;
+      camera.zoom = shot.zoom * fit;
       camera.lookAt(target.current);
       camera.updateProjectionMatrix();
       controls.current?.target.copy(target.current);
@@ -838,19 +843,20 @@ function CameraRig({ view, reset }: { view: CourtroomView; reset: number }) {
     }
     moving.current = true;
     invalidate();
-  }, [camera, view, reset, size.width, size.height, invalidate]);
+  }, [camera, view, reset, fit, invalidate]);
 
   useFrame((_, delta) => {
     if (!moving.current || !controls.current) return;
     const alpha = reducedMotion.current ? 1 : 1 - Math.exp(-5 * Math.min(delta, 0.1));
     camera.position.lerp(destination.current, alpha);
     controls.current.target.lerp(target.current, alpha);
-    camera.zoom = THREE.MathUtils.lerp(camera.zoom, zoom.current, alpha);
+    framing.current = THREE.MathUtils.lerp(framing.current, shotZoom.current, alpha);
+    camera.zoom = framing.current * fit;
     camera.updateProjectionMatrix();
     controls.current.update();
     if (
       camera.position.distanceToSquared(destination.current) < 0.00001 &&
-      Math.abs(camera.zoom - zoom.current) < 0.001
+      Math.abs(framing.current - shotZoom.current) < 0.0005
     ) {
       moving.current = false;
     } else invalidate();
@@ -898,6 +904,12 @@ function ContextMonitor() {
   return null;
 }
 
+function SceneReady({ onReady }: { onReady?: () => void }) {
+  const { active } = useProgress();
+  React.useEffect(() => { if (!active) onReady?.(); }, [active, onReady]);
+  return null;
+}
+
 export default function CourtroomScene({
   view,
   lighting,
@@ -905,6 +917,7 @@ export default function CourtroomScene({
   judge,
   cast,
   speech,
+  onReady,
 }: {
   view: CourtroomView;
   lighting: LightingPreset;
@@ -912,6 +925,7 @@ export default function CourtroomScene({
   judge: JudgePerformance;
   cast: CourtroomCast;
   speech: CourtroomSpeech;
+  onReady?: () => void;
 }) {
   const [supported, setSupported] = React.useState<boolean | null>(null);
   React.useEffect(() => {
@@ -974,6 +988,7 @@ export default function CourtroomScene({
       <Cast cast={cast} speech={speech} />
       <CameraRig view={view} reset={reset} />
       <ContextMonitor />
+      <SceneReady onReady={onReady} />
     </Canvas>
   );
 }

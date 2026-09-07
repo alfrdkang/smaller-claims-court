@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { badRequest, notFound, readJson } from "@/lib/http";
+import { recordStatement } from "@/lib/statement-voice";
 import { updateCase } from "@/lib/store";
 import { firstIssue, RebuttalSchema } from "@/lib/validate";
 
@@ -19,5 +20,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   });
 
   if (!updated) return notFound();
-  return NextResponse.json(updated);
+  const spoken = await recordStatement(id, "defendant", parsed.data.rebuttal);
+  return NextResponse.json(spoken ?? updated);
 }

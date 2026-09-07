@@ -1,6 +1,7 @@
 import * as z from "zod/v4";
 
 import { DEFAULT_PERSONA, PERSONAS } from "./personas";
+import { CHARACTER_IDS } from "./characters";
 
 export const MAX_EVIDENCE_ITEMS = 6;
 /** Roughly 4MB of decoded image, expressed as base64 characters. */
@@ -32,6 +33,8 @@ export const NewCaseSchema = z.object({
     .optional()
     .transform((s) => (s ?? "").trim().slice(0, 200)),
   personaId,
+  plaintiffCharacter: z.enum(CHARACTER_IDS).default("a"),
+  defendantCharacter: z.enum(CHARACTER_IDS).default("a"),
 });
 
 export const EvidenceSchema = z.object({

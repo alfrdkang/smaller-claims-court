@@ -98,11 +98,14 @@ export function sampleCharacterPose(
     pose.armLeft[2] = 0.07 + 0.05 * amount;
     pose.armRight[2] = -0.07 - 0.05 * amount;
   } else if (motion === "speak") {
+    // The lecterns hide everything below the chest, so the head and torso carry the delivery.
     const beat = reducedMotion ? 0 : Math.sin(time * 2.6);
+    const stress = reducedMotion ? 0 : Math.sin(time * 1.15);
     const lift = reducedMotion ? 0.5 : 0.5 + 0.5 * Math.sin(time * 2.2);
-    pose.torso[1] = inward * 0.06 * amount;
-    pose.head[1] = (inward * 0.12 + beat * 0.1) * amount;
-    pose.head[0] = beat * 0.06 * amount;
+    pose.torso[0] = breath + (0.05 + stress * 0.05) * amount;
+    pose.torso[1] = (inward * 0.08 + stress * 0.09) * amount;
+    pose.head[1] = (inward * 0.14 + beat * 0.2) * amount;
+    pose.head[0] = (0.02 + beat * 0.16) * amount;
     const gesturing = side === -1 ? "armLeft" : "armRight";
     pose[gesturing][0] = -(0.55 + lift * 0.5) * amount;
     pose[gesturing][2] = side === -1 ? (0.07 + 0.32 * lift) * amount : -(0.07 + 0.32 * lift) * amount;
