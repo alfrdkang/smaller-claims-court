@@ -169,7 +169,7 @@ function CaseCaption({ record }: { record: Case }) {
           Statement of claim
         </span>
         <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-oak-600">
-          Filed {new Date(record.createdAt).toLocaleDateString()}
+          Filed {new Date(record.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
         </span>
       </div>
 
@@ -443,7 +443,7 @@ function VerdictSheet({
           </p>
         </div>
         <p className="font-mono text-[9px] uppercase tracking-[0.16em] text-oak-600">
-          Entered {new Date(verdict.deliveredAt).toLocaleString()}
+          Entered {new Date(verdict.deliveredAt).toLocaleString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric" })}
         </p>
       </div>
 
@@ -506,7 +506,7 @@ function PriorRulings({ record }: { record: Case }) {
           <li key={old.deliveredAt} className="border-l-2 border-brass-600/30 pl-4">
             <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-oak-300/70">
               {getPersona(old.personaId).name} &middot;{" "}
-              {new Date(old.deliveredAt).toLocaleString()}
+              {new Date(old.deliveredAt).toLocaleString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "numeric" })}
             </p>
             <p className="mt-1 font-display text-sm text-brass-200/90">{old.caseCitation}</p>
             <p className="mt-1 text-sm leading-relaxed text-oak-200/75">{old.ruling}</p>

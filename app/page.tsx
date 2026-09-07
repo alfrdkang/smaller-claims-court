@@ -2,6 +2,7 @@ import Link from "next/link";
 import React from "react";
 
 import { Gavel } from "@/components/Gavel";
+import { SampleCaseButton } from "@/components/SampleCaseButton";
 import { PERSONA_LIST } from "@/lib/personas";
 import { COURT_NAME } from "@/lib/site";
 
@@ -48,6 +49,7 @@ export default function LandingPage() {
           <Link href="/file" className="btn-primary">
             File a case
           </Link>
+          <SampleCaseButton />
           <Link href="/docket" className="btn-ghost">
             Public docket
           </Link>
