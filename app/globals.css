@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-oak-950 text-oak-100 font-serif antialiased;
+    background-image:
+      radial-gradient(ellipse 80% 55% at 50% -10%, rgba(212, 171, 69, 0.16), transparent 70%),
+      radial-gradient(ellipse 60% 50% at 50% 110%, rgba(111, 68, 45, 0.35), transparent 70%),
+      repeating-linear-gradient(
+        94deg,
+        rgba(26, 15, 10, 0) 0px,
+        rgba(46, 27, 19, 0.55) 2px,
+        rgba(26, 15, 10, 0) 5px,
+        rgba(74, 44, 30, 0.35) 9px
+      );
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    @apply bg-brass-400/40 text-parchment;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  /* A sheet of court stationery. */
+  .paper {
+    @apply rounded-sm bg-parchment text-oak-950 shadow-2xl shadow-black/60;
+    background-image: radial-gradient(
+      circle at 20% 0%,
+      rgba(255, 255, 255, 0.7),
+      rgba(238, 229, 211, 0.4)
+    );
+  }
+
+  .panel {
+    @apply rounded-sm border border-brass-600/30 bg-oak-900/70 backdrop-blur-sm;
+  }
+
+  .label {
+    @apply block font-mono text-[11px] uppercase tracking-[0.18em] text-brass-300/80;
+  }
+
+  .field {
+    @apply mt-2 w-full rounded-sm border border-brass-600/30 bg-oak-950/70 px-3 py-2.5
+      font-serif text-oak-50 placeholder:text-oak-400/60
+      focus:border-brass-400 focus:outline-none focus:ring-1 focus:ring-brass-400/50;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm px-5 py-3 font-display
+      text-sm uppercase tracking-[0.2em] transition disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-brass-400 text-oak-950 hover:bg-brass-300
+      shadow-[0_0_28px_-6px_rgba(212,171,69,0.7)];
+  }
+
+  .btn-ghost {
+    @apply btn border border-brass-600/40 text-brass-200 hover:border-brass-400 hover:text-brass-100;
+  }
+
+  .rule-brass {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-brass-500/60 to-transparent;
+  }
+
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-[0.32em] text-brass-300/70;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
